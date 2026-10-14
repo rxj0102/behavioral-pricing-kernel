@@ -1,0 +1,13 @@
+run:
+  seed: 20240601
+  results_log: results/results_log.csv
+  fast: false
+data:
+  start: 1996-01-01
+  end: 2024-12-31
+  cache_dir: results/cache
+  manifest_path: results/data_manifest.json
+  horizon_days: 30
+estimation:
+  n_starts: 8
+  n_bootstrap: 200

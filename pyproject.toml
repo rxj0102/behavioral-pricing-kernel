@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "behavioral-pricing-kernel"
+version = "0.1.0"
+description = "Behavioral explanations of the pricing kernel puzzle with option-implied densities"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "numpy>=2.0,<3",
+    "scipy>=1.13,<2",
+    "pandas>=2.2,<4",
+    "pyarrow>=16,<27",
+    "pydantic>=2.7,<3",
+    "pyyaml>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+    "hypothesis>=6.100,<7",
+    "ruff>=0.5,<1",
+    "mypy>=1.10,<3",
+    "pandas-stubs",
+    "types-PyYAML",
+    "pre-commit>=3.7,<5",
+]
+dashboard = ["streamlit>=1.35,<2", "plotly>=5.22,<7"]
+paper = ["matplotlib>=3.8,<4", "jinja2>=3.1,<4"]
+wrds = ["wrds>=3.2,<4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+bpk = ["py.typed"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "wrds.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["integration: slower tests on a small synthetic panel"]
