@@ -1,0 +1,17 @@
+# source: synthetic_heston
+# config_hash: 7ce899b94cc691aa22b5076cf09460f33c8acf06ce69a3ed0d4d56f1986c1934
+# requested_start: 1996-01-01
+# requested_end: 2024-12-31
+# observed_start: 1996-01-01
+# observed_end: 2024-12-31
+# raw_rows: 13893338
+# clean_rows: 4944736
+step,rows_before,rows_after,dropped,share_of_raw
+missing_quote,13893338,13754235,139103,0.010012
+crossed,13754235,13726570,27665,0.001991
+zero_bid,13726570,12190691,1535879,0.110548
+low_open_interest,12190691,11322478,868213,0.062491
+low_mid,11322478,11322478,0,0.0
+wide_spread,11322478,11153019,169459,0.012197
+no_forward,11153019,11153019,0,0.0
+itm_duplicate,11153019,4944736,6208283,0.446853
