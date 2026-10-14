@@ -8,7 +8,7 @@ import pytest
 
 from bpk.config import CleaningConfig, SyntheticConfig
 from bpk.data.clean import clean_panel, infer_forward
-from bpk.data.synthetic import SyntheticHestonAdapter
+from bpk.data.synthetic import SyntheticData, SyntheticHestonAdapter
 
 CFG = CleaningConfig()
 
@@ -20,7 +20,7 @@ def test_parity_forward_recovers_truth_with_noise() -> None:
     disc = np.exp(-r * t)
     call = 40.0 + 0.5 * (f_true - k) * disc + 0.5 * rng.normal(0, 0.02, len(k))
     put = call - disc * (f_true - k) + rng.normal(0, 0.02, len(k))
-    f, ok = infer_forward(pd.Series(k), pd.Series(call), pd.Series(put), 1 / disc, CFG)
+    f, ok = infer_forward(pd.Series(k), pd.Series(call), pd.Series(put), 1 / disc, CFG, 1000.0)
     assert abs(f / f_true - 1) < 2e-4
     assert 9 <= ok.sum() <= 11  # strikes within about 5 percent of the forward
 
@@ -31,26 +31,31 @@ def test_parity_forward_rejects_outlier_pair() -> None:
     call = 30.0 + 0.5 * (1000.0 - k) * disc
     put = call - disc * (1000.0 - k)
     put[3] += 20.0  # a bad put quote, 2 percent of the forward
-    f, ok = infer_forward(pd.Series(k), pd.Series(call), pd.Series(put), 1 / disc, CFG)
+    f, ok = infer_forward(pd.Series(k), pd.Series(call), pd.Series(put), 1 / disc, CFG, 1000.0)
     assert abs(f / 1000.0 - 1) < 1e-6
     assert not ok.iloc[3]
 
 
 def test_too_few_pairs_gives_nan() -> None:
     f, ok = infer_forward(
-        pd.Series([1000.0, 1010.0]), pd.Series([30.0, 25.0]), pd.Series([28.0, 30.0]), 1.0, CFG
+        pd.Series([1000.0, 1010.0]),
+        pd.Series([30.0, 25.0]),
+        pd.Series([28.0, 30.0]),
+        1.0,
+        CFG,
+        1000.0,
     )
     assert np.isnan(f) and not ok.any()
 
 
 @pytest.fixture(scope="module")
-def synth() -> tuple[pd.DataFrame, pd.DataFrame]:
+def synth() -> SyntheticData:
     ad = SyntheticHestonAdapter(SyntheticConfig(), seed=7)
     return ad.generate(date(2019, 1, 2), date(2019, 1, 11))
 
 
-def test_audit_table_is_consistent(synth: tuple[pd.DataFrame, pd.DataFrame]) -> None:
-    panel, _ = synth
+def test_audit_table_is_consistent(synth: SyntheticData) -> None:
+    panel = synth.panel
     res = clean_panel(panel, CFG)
     s = res.stats
     assert s["rows_before"].iloc[0] == len(panel)
@@ -60,9 +65,9 @@ def test_audit_table_is_consistent(synth: tuple[pd.DataFrame, pd.DataFrame]) -> 
 
 
 def test_cleaned_quotes_are_otm_valid_and_forward_accurate(
-    synth: tuple[pd.DataFrame, pd.DataFrame],
+    synth: SyntheticData,
 ) -> None:
-    panel, truth = synth
+    panel, truth = synth.panel, synth.truth
     q = clean_panel(panel, CFG).quotes
     assert (q["bid"] > 0).all() and (q["bid"] <= q["ask"]).all()
     assert (q["open_interest"] >= CFG.min_open_interest).all()
@@ -75,9 +80,9 @@ def test_cleaned_quotes_are_otm_valid_and_forward_accurate(
 
 
 def test_crossed_and_missing_defects_are_injected_and_removed(
-    synth: tuple[pd.DataFrame, pd.DataFrame],
+    synth: SyntheticData,
 ) -> None:
-    panel, _ = synth
+    panel = synth.panel
     assert panel["ask"].isna().any() and (panel["bid"] > panel["ask"]).any()
     q = clean_panel(panel, CFG).quotes
     assert q[["bid", "ask"]].notna().all().all()
@@ -93,5 +98,35 @@ def test_synthetic_is_deterministic() -> None:
     c = SyntheticHestonAdapter(SyntheticConfig(), seed=4).generate(
         date(2019, 1, 2), date(2019, 1, 4)
     )
-    pd.testing.assert_frame_equal(a[0], b[0])
-    assert not a[1]["spot"].equals(c[1]["spot"])
+    pd.testing.assert_frame_equal(a.panel, b.panel)
+    assert not a.truth["spot"].equals(c.truth["spot"])
+
+
+def test_wings_are_kept_without_counterpart(synth: SyntheticData) -> None:
+    """Deep OTM quotes must not be dropped for lacking a call-put counterpart."""
+    res = clean_panel(synth.panel, CFG)
+    q = res.quotes
+    assert "parity_forward" not in set(res.stats["step"])
+    assert (q["strike"] / q["forward"] < 0.85).any() and (q["strike"] / q["forward"] > 1.12).any()
+    # A kept deep-OTM put has no call at its strike in the cleaned set (OTM only).
+    deep = q[(q["cp"] == "P") & (q["strike"] / q["forward"] < 0.85)]
+    assert len(deep) > 0
+
+
+def test_moneyness_stats_reconcile_with_aggregate(synth: SyntheticData) -> None:
+    res = clean_panel(synth.panel, CFG)
+    by = res.stats_by_moneyness
+    agg = by.groupby("step", sort=False)[["rows_before", "rows_after"]].sum()
+    for _, r in res.stats.iterrows():
+        assert agg.loc[r["step"], "rows_before"] == r["rows_before"]
+        assert agg.loc[r["step"], "rows_after"] == r["rows_after"]
+    assert set(by["bucket"]) == {
+        "lt_-0.30",
+        "-0.30_-0.15",
+        "-0.15_-0.05",
+        "-0.05_0.05",
+        "0.05_0.15",
+        "0.15_0.30",
+        "gt_0.30",
+    }
+    assert (by["dropped"] >= 0).all()

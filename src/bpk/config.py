@@ -7,6 +7,8 @@ BPK_CONFIG (or configs/default.yaml) is the single source of run settings.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from datetime import date
 from pathlib import Path
@@ -37,18 +39,39 @@ class DataConfig(_Strict):
         return self
 
 
+class SdfTruthConfig(_Strict):
+    """Known behavioral SDF used by the synthetic generator (stored for the recovery test).
+
+    SDF on the physical log return y: m(y) proportional to exp(-gamma y) w'(S(y)), with Prelec
+    weighting w(p) = exp(-beta (-ln p)^alpha_t). Sentiment s_t is a standardized AR(1) and
+    alpha_t = clip(alpha0 - delta s_t, alpha_min, 1), so positive delta means high sentiment
+    gives stronger probability-weighting curvature (lower alpha).
+    """
+
+    gamma: float = Field(2.0, ge=0)
+    alpha0: float = Field(0.9, gt=0, le=1)
+    beta: float = Field(1.0, gt=0)
+    delta: float = 0.05
+    alpha_min: float = Field(0.5, gt=0, le=1)
+    sentiment_phi: float = Field(0.99, ge=0, lt=1)
+
+
 class SyntheticConfig(_Strict):
     """Heston option panel used ONLY for method validation, never for empirical claims.
 
     Option prices use risk-neutral (Q) dynamics:
         dlnS = (r - q - v/2) dt + sqrt(v) dW1,  dv = kappa (theta - v) dt + sigma sqrt(v) dW2.
+    In pricing_mode behavioral_sdf the option prices instead come from the physical return
+    density (Heston P-dynamics) multiplied by the known SDF in sdf, see synthetic.py.
     The state path follows physical (P) dynamics: equity drift adds eta * v, and the
     variance process has kappa_P = kappa + lam, theta_P = kappa theta / (kappa + lam).
     """
 
+    pricing_mode: Literal["heston_q", "behavioral_sdf"] = "behavioral_sdf"
+    sdf: SdfTruthConfig = SdfTruthConfig()
     kappa: float = Field(3.0, gt=0)
     theta: float = Field(0.04, gt=0)
-    sigma: float = Field(0.5, gt=0)
+    sigma: float = Field(0.4, gt=0)
     rho: float = Field(-0.7, gt=-1, lt=1)
     v0: float = Field(0.04, gt=0)
     spot0: float = Field(1000.0, gt=0)
@@ -96,6 +119,20 @@ class Config(_Strict):
     synthetic: SyntheticConfig = SyntheticConfig()
     cleaning: CleaningConfig = CleaningConfig()
     tables_dir: Path = Path("results/tables")
+
+
+def result_hash(cfg: Config) -> str:
+    """SHA-256 of the settings that determine results (not output paths).
+
+    Covers run.seed, the data window, source and horizon, the synthetic and cleaning sections.
+    """
+    payload = {
+        "seed": cfg.run.seed,
+        "data": cfg.data.model_dump(mode="json", exclude={"cache_dir", "manifest_path"}),
+        "synthetic": cfg.synthetic.model_dump(mode="json"),
+        "cleaning": cfg.cleaning.model_dump(mode="json"),
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
 def load_config(path: str | Path | None = None) -> Config:

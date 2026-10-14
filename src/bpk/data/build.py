@@ -9,17 +9,19 @@ name so they cannot be mistaken for empirical data.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
 
-from bpk.config import Config, load_config
+from bpk.config import Config, load_config, result_hash
 from bpk.data.base import DataAdapter, DataUnavailableError, SeriesSpec
 from bpk.data.cache import CachedSource
 from bpk.data.clean import clean_panel
 from bpk.data.manifest import Manifest
 from bpk.data.synthetic import SyntheticHestonAdapter
 from bpk.data.wrds_adapter import WrdsAdapter
+from bpk.utils.stats_io import write_stats
 
 SPEC = SeriesSpec("spx_options", "panel")
 
@@ -36,23 +38,42 @@ def make_adapter(cfg: Config) -> DataAdapter:
 
 
 def build(cfg: Config) -> tuple[Path, Path]:
-    """Fetch (cached), clean, write outputs. Returns (quotes path, stats path)."""
+    """Fetch (cached), clean, write outputs. Returns (quotes path, stats path).
+
+    Every stats file carries the config hash and the requested and observed date range.
+    """
     adapter = make_adapter(cfg)
     src = CachedSource(adapter, cfg.data.cache_dir, Manifest(cfg.data.manifest_path))
     panel = src.get(SPEC, cfg.data.start, cfg.data.end)
     result = clean_panel(panel, cfg.cleaning)
     tag = adapter.source_name
     cfg.data.cache_dir.mkdir(parents=True, exist_ok=True)
-    cfg.tables_dir.mkdir(parents=True, exist_ok=True)
     quotes_path = cfg.data.cache_dir / f"clean_quotes__{tag}.parquet"
-    stats_path = cfg.tables_dir / f"cleaning_stats__{tag}.csv"
     result.quotes.to_parquet(quotes_path)
-    stats = result.stats.copy()
-    stats["share_of_raw"] = stats["share_of_raw"].round(6)
-    stats.to_csv(stats_path, index=False)
-    raw = len(panel)
-    print(f"source={tag} raw_rows={raw} clean_rows={len(result.quotes)}")
-    print(pd.DataFrame(result.stats).to_string(index=False))
+    meta = {
+        "source": tag,
+        "config_hash": result_hash(cfg),
+        "requested_start": cfg.data.start.isoformat(),
+        "requested_end": cfg.data.end.isoformat(),
+        "observed_start": pd.Timestamp(panel["date"].min()).date().isoformat(),
+        "observed_end": pd.Timestamp(panel["date"].max()).date().isoformat(),
+        "raw_rows": len(panel),
+        "clean_rows": len(result.quotes),
+    }
+    stats_path = cfg.tables_dir / f"cleaning_stats__{tag}.csv"
+    write_stats(result.stats, stats_path, meta)
+    write_stats(
+        result.stats_by_moneyness,
+        cfg.tables_dir / f"cleaning_stats_by_moneyness__{tag}.csv",
+        {**meta, "bucket_variable": "ln(strike / spot)"},
+    )
+    if isinstance(adapter, SyntheticHestonAdapter):
+        params = {**adapter.truth_params(), "config_hash": meta["config_hash"]}
+        (cfg.tables_dir / f"synthetic_truth_params__{tag}.json").write_text(
+            json.dumps(params, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    print(f"source={tag} raw_rows={len(panel)} clean_rows={len(result.quotes)}")
+    print(result.stats.to_string(index=False))
     return quotes_path, stats_path
 
 
