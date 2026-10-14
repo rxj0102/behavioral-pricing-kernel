@@ -4,11 +4,13 @@ run:
   results_log: results/results_log_fast.csv
   fast: true
 data:
+  source: synthetic  # real sources are added when data access is confirmed
   start: 2019-01-01
   end: 2019-12-31
   cache_dir: results/cache_fast
   manifest_path: results/data_manifest_fast.json
   horizon_days: 30
+tables_dir: results/tables_fast
 estimation:
   n_starts: 2
   n_bootstrap: 10
