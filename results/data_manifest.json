@@ -1,0 +1,11 @@
+{
+  "synthetic_heston__spx_options__19960101_20241231": {
+    "end": "2024-12-31",
+    "retrieved": "2026-10-14",
+    "rows": 13893338,
+    "series": "synthetic_heston__spx_options__19960101_20241231",
+    "sha256": "72eb918b215336609198eea05e3fdcf68771727e266d6141f831c668984178d3",
+    "source": "synthetic_heston",
+    "start": "1996-01-01"
+  }
+}

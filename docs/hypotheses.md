@@ -27,3 +27,13 @@ Can a behavioral stochastic discount factor with probability weighting (rank-dep
 - Every specification tried is appended to the results log by code, including failures and rejected ones.
 - The paper reports all four hypotheses, including those rejected or only partly supported.
 - No parameter, window or sample choice is tuned on the out-of-sample period.
+
+---
+
+## Amendment 1 (2026-10-14)
+
+The original text above is unchanged. This amendment is made before any estimation has been run, after the data situation became known: WRDS is unavailable, only free sources are allowed, and the real option data will be a forward-collected snapshot series (CBOE delayed chain) with a short window that excludes 2008 and 2020.
+
+- **H1 and H2 on real data are descriptive.** Over the collected window, results for H1 (fit comparison, Diebold-Mariano style test) and H2 (sentiment relation) are reported as descriptive statistics with their uncertainty. They are not confirmatory tests, and the paper must not describe them as supporting or rejecting the hypotheses beyond the collected window.
+- **H3 and H4 are evaluated only as a power study on the synthetic panel.** The collected window will have too few independent monthly observations for out-of-sample predictive tests or for the Deflated Sharpe Ratio. H3 and H4 are therefore examined by simulation: generate synthetic panels with a known behavioral SDF and a known predictive link of chosen strength, and report how often the H3 procedure (Campbell-Thompson out-of-sample R squared with Clark-West) and the H4 procedure (net Sharpe and Deflated Sharpe Ratio) detect it. No real-data claim is made for H3 or H4. If the collected series later becomes long enough for a real test, that is a new amendment stating the threshold before the test is run.
+- **Synthetic results are method validation only.** They show what the procedures can and cannot detect. They are never reported as evidence about markets.

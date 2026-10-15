@@ -17,7 +17,7 @@ lint:
 	$(PY) -m mypy
 
 data:
-	@echo "data: not implemented until Phase 1" >&2; exit 1
+	$(PY) -m bpk.data.build --config $(CONFIG)
 rnd:
 	@echo "rnd: not implemented until Phase 2" >&2; exit 1
 physical:

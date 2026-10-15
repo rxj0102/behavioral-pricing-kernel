@@ -1,0 +1,35 @@
+{
+  "config_hash": "7ce899b94cc691aa22b5076cf09460f33c8acf06ce69a3ed0d4d56f1986c1934",
+  "heston": {
+    "crossed_rate": 0.002,
+    "div_yield": 0.015,
+    "eta": 2.0,
+    "kappa": 3.0,
+    "lam": 1.5,
+    "maturities_days": [
+      21,
+      45,
+      80,
+      120,
+      180
+    ],
+    "missing_rate": 0.01,
+    "pricing_mode": "behavioral_sdf",
+    "rate": 0.02,
+    "rho": -0.7,
+    "sigma": 0.4,
+    "spot0": 1000.0,
+    "theta": 0.04,
+    "v0": 0.04
+  },
+  "pricing_mode": "behavioral_sdf",
+  "sdf": {
+    "alpha0": 0.9,
+    "alpha_min": 0.5,
+    "beta": 1.0,
+    "delta": 0.05,
+    "gamma": 2.0,
+    "sentiment_phi": 0.99
+  },
+  "seed": 20240601
+}
