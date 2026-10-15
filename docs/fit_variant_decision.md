@@ -69,3 +69,15 @@ What this does and does not show:
 
 - It shows legacy is the better default under the pre-registered rule on this synthetic panel. It does not show that robust fitting is a bad idea; the diagnostic points at the convex fallback as the failing component. The fallback was almost never used before robust fitting exposed it, which is itself a finding about untested paths.
 - Any follow-up (a repaired fallback, a robust variant with it) is a new candidate. It must be registered as a new round in this file before it is run, with a fresh date set drawn with a new seed key, because the primary and confirmation sets have now been used.
+
+## Scale sensitivity outcome (separate logged study, run after the decision)
+
+Robust loss scale 0.5, 2 and 4 spreads on the primary 152 dates, stale 5 percent and combined 2 (tables noise_study_fscale*, results-log ids svi_scale_*). The default scale stays one spread and the default fit stays legacy.
+
+- The convex-fallback share at combined 2 stays between 15 and 17 percent for every scale (one spread: 17 percent), so the loss scale does not remove the fallback problem. 30 day p90 L1 at combined 2 stays near or above 1.0 for all scales.
+- At stale 5 percent the p90 is 0.021 at 0.5 spreads, 0.023 at 2 and 0.031 at 4 (0.021 at one spread): a larger scale, which is closer to least squares, is worse there. The intervals for scales 2 and 4 are wide because a few fallback dates set the tail.
+- Read as sensitivity only: it does not choose a scale and it does not rescue the robust variants.
+
+## Note on the refreshed Phase 2 grading tables
+
+After the defaults changed (and the analytic SVI Jacobian was added), the 152-date grading tables were regenerated so that their config hash matches the code. They are numerically equivalent but not bit-identical: median absolute change in L1 is 0, the 99th percentile 2.6e-5, the maximum 0.013 (a few 21 day slices where the multistart landed on a different, better local optimum). Total L1 median is unchanged (0.0067); its 90th percentile moved from 0.0190 to 0.0185.

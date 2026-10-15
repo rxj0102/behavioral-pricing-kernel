@@ -1,0 +1,15 @@
+# source: synthetic_heston
+# config_hash: 2cb3c4620224b40d99fba60b58b12beb55e863b0e5b0fc7ee9ac5d7700f32b4e
+# n_dates: 152
+# first_date: 1996-01-26
+# last_date: 2024-09-09
+# specs: ["stale_0.05", "combined_2"]
+# variants: {"scale_0.5": {"svi_loss": "soft_l1", "svi_f_scale": 0.5, "enforce_calendar": false}, "scale_2.0": {"svi_loss": "soft_l1", "svi_f_scale": 2.0, "enforce_calendar": false}, "scale_4.0": {"svi_loss": "soft_l1", "svi_f_scale": 4.0, "enforce_calendar": false}}
+# note: synthetic panel, method validation only; baseline defects present at all levels
+variant,spec,kind,level,n_dates,slice_coverage,horizon_coverage,failed_slices,failed_horizons,l1_native_median,l1_native_p90,l1_30d_median,l1_30d_p90,l1_30d_p90_ci_lo,l1_30d_p90_ci_hi,l1_30d_p90_failures_at_max,svi_rmse_median,convex_fallback_share,butterfly_viol_points,calendar_points_before,calendar_points_after,mono_adjust_rel_mean,negative_points_native,negative_points_30d
+scale_0.5,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.005938,0.008868,0.00989,0.020621,0.02,0.021477,0.020621,0.002726,0.010526,8,0,0,0.0,850,7
+scale_2.0,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.006782,0.01064,0.012004,0.022866,0.020484,0.846113,0.022866,0.002701,0.015789,12,0,0,0.0,1218,5
+scale_4.0,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.007998,0.014601,0.013618,0.030855,0.022026,0.860434,0.030855,0.002693,0.015789,13,0,0,0.0,1115,0
+scale_0.5,combined_2,combined,2.0,152,0.989474,0.993421,8,1,0.012287,1.278067,0.590322,1.11683,1.008997,1.207293,1.119127,0.004559,0.170213,156,559,0,0.0,43863,4090
+scale_2.0,combined_2,combined,2.0,152,0.989474,0.993421,8,1,0.015516,1.278154,0.543413,1.077152,0.988153,1.207293,1.102936,0.004446,0.174202,176,452,0,0.0,44372,3726
+scale_4.0,combined_2,combined,2.0,152,0.989474,0.993421,8,1,0.019326,1.235807,0.510073,0.989031,0.924028,1.131213,0.989984,0.004435,0.152926,178,425,0,0.0,38513,2731
