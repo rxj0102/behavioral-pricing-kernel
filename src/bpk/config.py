@@ -95,6 +95,28 @@ class CleaningConfig(_Strict):
     min_pairs: int = Field(3, ge=2)
 
 
+class RndConfig(_Strict):
+    """Risk-neutral density settings (Phase 2)."""
+
+    tail_alpha: float = Field(0.02, gt=0, lt=0.2, description="Tail mass beyond each splice point")
+    u_step: float = Field(0.0005, gt=0, description="Strike spacing (units of forward) for BL")
+    k_min: float = -1.0
+    k_max: float = 0.8
+    n_k: int = Field(1801, gt=100)
+    min_points: int = Field(6, ge=5)
+    xi_bounds: tuple[float, float] = (-0.25, 0.5)
+    # Defaults set by the rule in docs/fit_variant_decision.md (legacy won, confirmed).
+    svi_loss: Literal["linear", "soft_l1", "huber", "cauchy"] = "linear"
+    svi_f_scale: float = Field(1.0, gt=0, description="Robust loss scale in units of one spread")
+    enforce_calendar: bool = False
+    tail_rule: Literal["fixed", "slope", "gev"] = "fixed"
+    xi_fixed: float = 0.0
+    slope_window: float = Field(0.02, gt=0, description="Half window in k for the tail slope")
+    convex_smooth: float = Field(1e-3, gt=0)
+    n_dates: int = Field(150, gt=0, description="Dates sampled for the grading study")
+    named_dates: tuple[date, ...] = (date(2008, 10, 10), date(2020, 3, 16))
+
+
 class RunConfig(_Strict):
     """Run-level settings."""
 
@@ -118,6 +140,7 @@ class Config(_Strict):
     estimation: EstimationConfig = EstimationConfig()
     synthetic: SyntheticConfig = SyntheticConfig()
     cleaning: CleaningConfig = CleaningConfig()
+    rnd: RndConfig = RndConfig()
     tables_dir: Path = Path("results/tables")
 
 

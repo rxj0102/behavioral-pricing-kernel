@@ -1,0 +1,11 @@
+# DISABLED EXAMPLE (systemd user unit). Copy to ~/.config/systemd/user/ only after enabling steps.
+[Unit]
+Description=Daily CBOE SPX chain snapshot (behavioral-pricing-kernel)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/path/to/behavioral-pricing-kernel
+Environment=BPK_CBOE_TERMS_ACK=i-have-read-the-cboe-terms-of-use
+Environment=BPK_CBOE_RAW_DIR=/absolute/private/path/outside/the/repo/cboe_raw
+ExecStart=/path/to/venv/bin/python scripts/collect_cboe_snapshot.py
+# A nonzero exit marks the unit failed, which is visible in systemctl --user status.

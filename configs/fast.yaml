@@ -10,6 +10,9 @@ data:
   cache_dir: results/cache_fast
   manifest_path: results/data_manifest_fast.json
   horizon_days: 30
+rnd:
+  n_dates: 6
+  named_dates: []
 tables_dir: results/tables_fast
 estimation:
   n_starts: 2

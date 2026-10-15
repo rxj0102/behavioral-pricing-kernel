@@ -1,0 +1,7 @@
+# DISABLED EXAMPLE. Do not install until all of docs/collector.md section Enabling is done.
+# Weekdays 16:30 New York time (cash close plus margin). Edit the three paths and the user.
+#
+# CRON_TZ=America/New_York
+# BPK_CBOE_TERMS_ACK=i-have-read-the-cboe-terms-of-use
+# BPK_CBOE_RAW_DIR=/absolute/private/path/outside/the/repo/cboe_raw
+# 30 16 * * 1-5  cd /path/to/behavioral-pricing-kernel && /path/to/venv/bin/python scripts/collect_cboe_snapshot.py >> /absolute/private/path/outside/the/repo/cboe_raw/collector.log 2>&1
