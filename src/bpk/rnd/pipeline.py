@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 
 from bpk.config import RndConfig
 from bpk.rnd.density import RndEstimate, rnd_from_w
+from bpk.rnd.monotone import enforce_monotone
 from bpk.rnd.slice import SliceFit, fit_slice
 
 FloatArr = NDArray[np.float64]
@@ -34,6 +35,8 @@ class DateResult:
     horizon: RndEstimate | None = None
     horizon_forward: float = float("nan")
     calendar_violations: dict[tuple[int, int], int] = field(default_factory=dict)
+    calendar_violations_after: dict[tuple[int, int], int] = field(default_factory=dict)
+    mono_adjust_rel: float = 0.0  # mean |w_adjusted - w| / w over a common k grid
     horizon_bracket: tuple[int, int] | None = None
 
 
@@ -84,6 +87,21 @@ def rnd_for_date(quotes: pd.DataFrame, horizon_days: int, cfg: RndConfig) -> Dat
     days = sorted(res.slices)
     for d1, d2 in itertools.pairwise(days):
         res.calendar_violations[(d1, d2)] = calendar_violations(res.slices[d1], res.slices[d2])
+    if cfg.enforce_calendar and len(days) >= 2:
+        raw = [res.slices[d] for d in days]
+        adj = enforce_monotone(raw)
+        kk = np.linspace(max(s.k_lo for s in raw), min(s.k_hi for s in raw), 50)
+        if kk[-1] > kk[0]:
+            rel = [
+                np.mean(np.abs(a.w_func(kk) - r.w_func(kk)) / r.w_func(kk))
+                for a, r in zip(adj, raw, strict=True)
+            ]
+            res.mono_adjust_rel = float(np.mean(rel))
+        res.slices = dict(zip(days, adj, strict=True))
+        for d1, d2 in itertools.pairwise(days):
+            res.calendar_violations_after[(d1, d2)] = calendar_violations(
+                res.slices[d1], res.slices[d2]
+            )
     for d, s in res.slices.items():
         res.native[d] = rnd_from_w(s.w_func, s.k_lo, s.k_hi, cfg)
     below = [d for d in days if d <= horizon_days]

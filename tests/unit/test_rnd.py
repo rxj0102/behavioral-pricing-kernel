@@ -194,3 +194,68 @@ def test_gev_tail_matches_mass_and_density_at_splice(xi: float) -> None:
     cfg = RndConfig(tail_rule="gev", xi_fixed=xi)
     d2, got = gpd_density(z[:50], 0.03, 0.5, -1.0, cfg)
     assert got == xi and np.allclose(d2, d[:50])
+
+
+def test_isotonic_columns_properties() -> None:
+    from bpk.rnd.monotone import isotonic_columns
+
+    rng = np.random.default_rng(0)
+    w = np.sort(rng.random((5, 40)), axis=0)  # already monotone
+    assert np.allclose(isotonic_columns(w), w)
+    bad = rng.random((5, 40))
+    fit = isotonic_columns(bad)
+    assert (np.diff(fit, axis=0) >= -1e-12).all()
+    assert np.allclose(isotonic_columns(fit), fit)  # idempotent
+    # least squares optimality against the running-max repair
+    runmax = np.maximum.accumulate(bad, axis=0)
+    assert ((fit - bad) ** 2).sum() <= ((runmax - bad) ** 2).sum() + 1e-12
+    assert np.allclose(fit.mean(axis=0), bad.mean(axis=0))  # isotonic fit preserves the mean
+
+
+def test_enforce_monotone_removes_calendar_violations() -> None:
+    from bpk.rnd.monotone import enforce_monotone
+
+    def mk(dte: int, level: float) -> SliceFit:
+        return SliceFit(dte, dte / 365, 1000.0, R, -0.2, 0.2, "svi", None, 10, 0.0, 0, _flat(level))
+
+    raw = [mk(21, 0.02), mk(45, 0.015), mk(80, 0.05)]
+    assert calendar_violations(raw[0], raw[1]) > 0
+    adj = enforce_monotone(raw)
+    assert calendar_violations(adj[0], adj[1]) == 0 and calendar_violations(adj[1], adj[2]) == 0
+    k = np.linspace(-0.1, 0.1, 5)
+    assert np.allclose(adj[0].w_func(k), 0.0175) and np.allclose(adj[2].w_func(k), 0.05)
+
+
+def test_robust_loss_resists_a_bad_quote_better_than_least_squares() -> None:
+    true = np.array([0.01, 0.12, -0.5, 0.02, 0.15])
+    k = np.linspace(-0.4, 0.4, 41)
+    width = np.full_like(k, 0.002)
+    w = svi_w(k, true)
+    w[30] += 0.03  # a stale or mistyped quote far outside its spread
+    wt = 1.0 / width
+    lin = fit_svi(k, w, wt, (-0.5, 0.5), loss="linear")
+    rob = fit_svi(k, w, wt, (-0.5, 0.5), loss="soft_l1", f_scale=1.0)
+    clean_w = svi_w(k, true)
+    err_lin = float(np.abs(svi_w(k, lin.params) - clean_w).max())
+    err_rob = float(np.abs(svi_w(k, rob.params) - clean_w).max())
+    assert err_rob < 0.5 * err_lin
+    assert rob.butterfly_ok
+
+
+def test_analytic_svi_jacobian_matches_finite_differences() -> None:
+    from bpk.rnd.svi import _jac, _residuals
+
+    k = np.linspace(-0.3, 0.3, 17)
+    w = svi_w(k, np.array([0.01, 0.1, -0.4, 0.01, 0.12]))
+    wt = np.linspace(1.0, 3.0, 17)
+    p = np.array([0.012, 0.09, -0.3, 0.02, 0.1])
+    kg = np.linspace(-0.4, 0.4, 20)
+    ana = _jac(p, k, w, wt, kg, 0.0)
+    num = np.zeros_like(ana)
+    for j in range(5):
+        dp = np.zeros(5)
+        dp[j] = 1e-7
+        num[:, j] = (
+            _residuals(p + dp, k, w, wt, kg, 0.0) - _residuals(p - dp, k, w, wt, kg, 0.0)
+        ) / 2e-7
+    assert np.abs(ana - num).max() < 1e-5

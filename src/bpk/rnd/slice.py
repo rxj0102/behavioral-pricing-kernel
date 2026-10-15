@@ -68,10 +68,11 @@ def fit_slice(q: pd.DataFrame, cfg: RndConfig) -> SliceFit | None:
     mid = mid[good][order]
     bid = bid[good][order]
     ask = ask[good][order]
-    wt = 1.0 / np.maximum(width, 0.02 * w)
-    wt = wt / float(np.max(wt))
+    wt = 1.0 / np.maximum(width, 0.02 * w)  # inverse spread in total variance
+    if cfg.svi_loss == "linear":
+        wt = wt / float(np.max(wt))  # legacy scaling, same minimizer as unscaled
     k_lo, k_hi = float(np.min(k)), float(np.max(k))
-    svi = fit_svi(k, w, wt, (k_lo - 0.1, k_hi + 0.1))
+    svi = fit_svi(k, w, wt, (k_lo - 0.1, k_hi + 0.1), cfg.svi_loss, cfg.svi_f_scale)
     kg = np.linspace(k_lo - 0.1, k_hi + 0.1, 400)
     n_viol = int((butterfly_g(kg, svi.params) < -1e-8).sum())
     if svi.butterfly_ok:

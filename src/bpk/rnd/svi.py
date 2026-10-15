@@ -63,8 +63,27 @@ def _residuals(
     return np.asarray(res, dtype=np.float64)
 
 
+def _jac(p: FloatArr, k: FloatArr, w: FloatArr, wt: FloatArr, kg: FloatArr, lam: float) -> FloatArr:
+    """Analytic Jacobian of the unpenalized residuals (svi_w(k) - w) * wt (lam must be 0).
+
+    dw/da = 1, dw/db = rho (k - m) + r, dw/drho = b (k - m),
+    dw/dm = -b (rho + (k - m) / r), dw/ds = b s / r, with r = sqrt((k - m)^2 + s^2).
+    """
+    _, b, rho, m, s = p
+    x = k - m
+    r = np.sqrt(x * x + s * s)
+    cols = [np.ones_like(k), rho * x + r, b * x, -b * (rho + x / r), b * s / r]
+    return np.asarray(np.column_stack(cols) * wt[:, None], dtype=np.float64)
+
+
 def _multistart(
-    k: FloatArr, w: FloatArr, wt: FloatArr, kg: FloatArr, lam: float
+    k: FloatArr,
+    w: FloatArr,
+    wt: FloatArr,
+    kg: FloatArr,
+    lam: float,
+    loss: str,
+    f_scale: float,
 ) -> tuple[FloatArr, bool]:
     wmax = float(np.nanmax(w))
     lo = np.array([-wmax, 1e-6, -0.999, float(np.min(k)) - 0.5, 1e-4])
@@ -75,15 +94,35 @@ def _multistart(
         for m0 in (-0.05, 0.0, 0.05):
             for s0 in (0.05, 0.25):
                 p0 = np.clip(np.array([0.5 * w_atm, 0.1, rho0, m0, s0]), lo + 1e-9, hi - 1e-9)
-                r = least_squares(_residuals, p0, bounds=(lo, hi), args=(k, w, wt, kg, lam))
-                pen = float(np.sum(r.fun**2))
+                r = least_squares(
+                    _residuals,
+                    p0,
+                    bounds=(lo, hi),
+                    args=(k, w, wt, kg, lam),
+                    jac=_jac if lam == 0 else "2-point",
+                    loss=loss,
+                    f_scale=f_scale,
+                )
+                pen = float(r.cost)  # robust cost under the chosen loss
                 if pen < best_pen:
                     best_pen, best_x, best_ok = pen, r.x, bool(r.success)
     return best_x, best_ok
 
 
-def fit_svi(k: FloatArr, w: FloatArr, wt: FloatArr, check_range: tuple[float, float]) -> SviFit:
-    """Weighted least squares SVI fit with butterfly check over check_range.
+def fit_svi(
+    k: FloatArr,
+    w: FloatArr,
+    wt: FloatArr,
+    check_range: tuple[float, float],
+    loss: str = "linear",
+    f_scale: float = 1.0,
+) -> SviFit:
+    """Weighted SVI fit with butterfly check over check_range.
+
+    Residuals are (w_model - w_obs) * wt. With wt = 1 / (bid-ask width in total variance) a
+    residual of 1 is one full spread, so f_scale = 1 treats quotes off by more than a spread
+    as outliers when a robust loss (soft_l1, huber, cauchy) is used. loss = linear is plain
+    weighted least squares.
 
     First an unpenalized multistart fit; if it violates the butterfly condition (or has
     nonpositive variance) a refit with a penalty on negative g is tried. The returned
@@ -94,9 +133,9 @@ def fit_svi(k: FloatArr, w: FloatArr, wt: FloatArr, check_range: tuple[float, fl
     def ok(p: FloatArr) -> bool:
         return bool(np.min(butterfly_g(kg, p)) >= -1e-8 and np.min(svi_w(kg, p)) > 0)
 
-    x, success = _multistart(k, w, wt, kg, 0.0)
+    x, success = _multistart(k, w, wt, kg, 0.0, loss, f_scale)
     if not ok(x):
-        x2, success2 = _multistart(k, w, wt, kg, 1e3)
+        x2, success2 = _multistart(k, w, wt, kg, 1e3, loss, f_scale)
         x, success = x2, success2
     g = butterfly_g(kg, x)
     rmse = float(np.sqrt(np.average((svi_w(k, x) - w) ** 2, weights=wt**2)))

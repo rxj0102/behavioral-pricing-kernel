@@ -81,13 +81,14 @@ def test_tiny_study_runs_and_writes_tables(tmp_path: Path) -> None:
             "tables_dir": str(tmp_path / "t"),
         }
     )
-    specs = (
-        SPECS[0],
-        NoiseSpec("jitter_2.0", "jitter", 2.0, jitter=2.0),
-        NoiseSpec("drop_0.4", "drop", 0.4, drop=0.4),
-    )
-    summ = run(cfg, 2, tmp_path / "t", specs)
-    assert list(summ["spec"]) == ["base", "jitter_2.0", "drop_0.4"]
+    specs = (SPECS[0], NoiseSpec("jitter_2.0", "jitter", 2.0, jitter=2.0))
+    summ = run(cfg, tmp_path / "t", specs, tag="t", n_dates=2)
+    assert set(summ["spec"]) == {"base", "jitter_2.0"}
+    assert set(summ["variant"]) == {"legacy", "robust", "robust_monotone"}
     assert (summ["l1_native_median"] < 0.2).all()
-    tbl, meta = read_stats(tmp_path / "t" / "noise_study_by_regime__synthetic_heston.csv")
+    assert ((summ["slice_coverage"] <= 1) & (summ["horizon_coverage"] <= 1)).all()
+    mono = summ[summ["variant"] == "robust_monotone"]
+    assert (mono["calendar_points_after"] == 0).all()
+    tbl, meta = read_stats(tmp_path / "t" / "noise_study_t_by_regime__synthetic_heston.csv")
     assert meta["n_dates"] == "2" and set(tbl["regime"]) <= {"low", "mid", "high"}
+    assert {"slice_coverage", "failed_slices", "l1_30d_p90_failures_at_max"} <= set(tbl.columns)

@@ -17,7 +17,7 @@ Code in src/bpk/rnd. No numbers are quoted here; the tables under results/tables
 
 Steps per date and maturity:
 1. Cleaned OTM mids are converted to forward-normalized undiscounted prices and then to implied total variance w by bisection (bs.py). Weights are the inverse bid-ask width in total variance.
-2. Raw SVI is fitted by weighted least squares with 18 starts (svi.py). Butterfly arbitrage is checked with Gatheral's g(k) on a grid over the quote range plus 0.1. If violated, a penalized refit is tried; if still violated, a convex fit is used (convex.py).
+2. Raw SVI is fitted with 18 starts (svi.py). Residuals are (model - observed total variance) divided by the bid-ask width in total variance, so a residual of 1 is one spread, and the default loss is soft-L1 with scale one spread (robust to quotes far outside their spread; scale fixed a priori). The legacy linear loss is kept as an option for comparison. Butterfly arbitrage is checked with Gatheral's g(k) on a grid over the quote range plus 0.1. If violated, a penalized refit is tried; if still violated, a convex fit is used (convex.py).
 3. Deviation from the spec: the fallback is a fit of nonnegative probability masses (convex by construction) rather than a smoothing spline followed by convexity repair. The masses are fitted by bounded least squares with a second-difference roughness penalty.
 4. Density by Breeden-Litzenberger: second derivative of the OTM price in strike on a fine uniform grid (density.py), density of the log return k = ln(S_T/F).
 5. Tails: generalized Pareto beyond splice points where the CDF reaches tail_alpha (default 2 percent) from each side, or at the edge of the quote range if that comes first. The tail matches the density and mass at the splice. Tail shape is fixed (xi = 0, exponential) by default. The slope-matching alternative scored worse against the exact synthetic density and is kept as an option; all variants are in results/results_log.csv (spec ids tail_*). That comparison used synthetic tails, which are light by construction, so it says nothing about which rule suits real option data. Deviation from the spec: GPD in log-return space, not GEV, and no GEV variant was tried.
@@ -42,3 +42,9 @@ The identification study design (oracle and estimated modes, grid of distortion 
 - Real-data sensitivity table (tail rules, splice, smile, maturity, cleaning, forward): docs/real_data_sensitivity_plan.md.
 - GEV tails were added to the tail-rule study as an option (tail_rule gev). Default stays the generalized Pareto with xi = 0. GEV and GPD variants scored within noise of each other on the synthetic truth, and the default was fixed before those scores were seen.
 - Noise-injection study (jitter, stale quotes, dropped strikes, combined): src/bpk/rnd/noise_study.py, tables noise_study_*.
+
+## Phase 2 follow-ups (robust fit, calendar enforcement)
+
+- Spread-weighted SVI with a robust loss (config rnd.svi_loss, default soft_l1, rnd.svi_f_scale = 1). Analytic Jacobian for the unpenalized stage.
+- Isotonic enforcement of monotone total variance in maturity before densities and interpolation (src/bpk/rnd/monotone.py, config rnd.enforce_calendar, default true). The fit is the least-squares nondecreasing sequence at each k and is a no-op when the input is already monotone. It does not guarantee the butterfly condition of the adjusted slices; negative density points are counted before and after.
+- Noise study v2 compares three pipeline variants (legacy, robust, robust_monotone) on identical noisy quotes over the 152-date grading set, with fit coverage next to every L1, failures by variance regime, L1 with failures counted at the worst value 2, and bootstrap intervals over dates.
