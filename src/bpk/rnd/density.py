@@ -61,8 +61,11 @@ def gpd_density(
 
     beta always matches the density at the splice and the tail mass. xi is either fixed
     (tail_rule fixed, default 0: exponential tail) or matched to the local log-slope
-    (tail_rule slope), clipped to xi_bounds.
+    (tail_rule slope), clipped to xi_bounds. Rule gev uses a GEV tail (gev_density) with
+    shape xi_fixed, matched in density and mass at the splice.
     """
+    if cfg.tail_rule == "gev":
+        return gev_density(z, mass, f0, cfg.xi_fixed), cfg.xi_fixed
     beta = mass / max(f0, 1e-300)
     if cfg.tail_rule == "fixed":
         xi = cfg.xi_fixed
@@ -74,6 +77,34 @@ def gpd_density(
     with np.errstate(divide="ignore", invalid="ignore"):
         dens = np.where(base > 0, (mass / beta) * base ** (-1.0 / xi - 1.0), 0.0)
     return np.asarray(dens, dtype=np.float64), xi
+
+
+def gev_density(z: FloatArr, mass: float, f0: float, xi: float) -> FloatArr:
+    """GEV tail density at outward distances z >= 0 with tail mass and density matched at z = 0.
+
+    The tail is the survival of a GEV G(z) = exp(-y^(-1/xi)), y = 1 + xi (z - mu) / s, restricted
+    to z >= 0, with shape xi fixed (xi = 0 is Gumbel). With G0 = 1 - mass and
+    t = y0^(-1/xi) = -ln G0 at z = 0:
+        s = G0 t / (f0 y0),  mu = -s (y0 - 1) / xi,  y0 = t^(-xi)
+    (Gumbel: s = G0 t / f0, mu = s ln t). The tail beyond z = 0 then has mass 1 - G0 = mass
+    and density f0 at the splice, as the GPD tail.
+    """
+    g0 = 1.0 - mass
+    t = -np.log(g0)
+    if abs(xi) < 1e-8:
+        s = g0 * t / max(f0, 1e-300)
+        mu = s * np.log(t)
+        u = np.exp(-(z - mu) / s)
+        return np.asarray((1.0 / s) * u * np.exp(-u), dtype=np.float64)
+    y0 = t ** (-xi)
+    s = g0 * t / (max(f0, 1e-300) * y0)
+    mu = -s * (y0 - 1.0) / xi
+    y = 1.0 + xi * (z - mu) / s
+    with np.errstate(divide="ignore", invalid="ignore"):
+        dens = np.where(
+            y > 0, (1.0 / s) * y ** (-1.0 / xi - 1.0) * np.exp(-(y ** (-1.0 / xi))), 0.0
+        )
+    return np.asarray(dens, dtype=np.float64)
 
 
 def _log_slope(k: FloatArr, f: FloatArr, i: int, half: float) -> float:

@@ -34,3 +34,11 @@ Known limitations:
 ## Phase 5 design
 
 The identification study design (oracle and estimated modes, grid of distortion strengths including zero, power curve, gate before real data) is fixed in docs/phase5_plan.md.
+
+## Plans fixed before the next phases
+
+- Phase 3 requirements (clock mapping, oracle and estimated drift, scoring, PIT and Berkowitz): docs/phase3_plan.md.
+- Phase 4 requirements (EPK validity region, null distribution at alpha0 = 1.00): docs/phase4_plan.md.
+- Real-data sensitivity table (tail rules, splice, smile, maturity, cleaning, forward): docs/real_data_sensitivity_plan.md.
+- GEV tails were added to the tail-rule study as an option (tail_rule gev). Default stays the generalized Pareto with xi = 0. GEV and GPD variants scored within noise of each other on the synthetic truth, and the default was fixed before those scores were seen.
+- Noise-injection study (jitter, stale quotes, dropped strikes, combined): src/bpk/rnd/noise_study.py, tables noise_study_*.

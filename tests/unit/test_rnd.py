@@ -11,7 +11,7 @@ from scipy.stats import norm
 from bpk.config import RndConfig
 from bpk.rnd.bs import black_norm, implied_total_variance
 from bpk.rnd.convex import fit_convex_masses, prices_from_masses
-from bpk.rnd.density import gpd_density, rnd_from_w
+from bpk.rnd.density import gev_density, gpd_density, rnd_from_w
 from bpk.rnd.grade import grade_estimate
 from bpk.rnd.pipeline import calendar_violations, interpolate_slices
 from bpk.rnd.slice import SliceFit, fit_slice
@@ -182,3 +182,15 @@ def test_grading_exact_density_has_zero_error_and_perturbation_is_measured() -> 
     shifted = np.interp(est.k - 0.01, est.k, est.density)
     tot = next(r["l1"] for r in grade_estimate(est, shifted) if r["region"] == "total")
     assert float(tot) > 0.05  # type: ignore[arg-type]  # a 0.01 location shift of a narrow density is clearly visible
+
+
+@pytest.mark.parametrize("xi", [0.0, 0.15, -0.1])
+def test_gev_tail_matches_mass_and_density_at_splice(xi: float) -> None:
+    z = np.linspace(0, 30, 600001)
+    d = gev_density(z, 0.03, 0.5, xi)
+    assert d[0] == pytest.approx(0.5, rel=1e-6)
+    assert float(np.trapezoid(d, z)) == pytest.approx(0.03, rel=2e-3)
+    assert (d >= 0).all()
+    cfg = RndConfig(tail_rule="gev", xi_fixed=xi)
+    d2, got = gpd_density(z[:50], 0.03, 0.5, -1.0, cfg)
+    assert got == xi and np.allclose(d2, d[:50])
