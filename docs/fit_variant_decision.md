@@ -44,3 +44,28 @@ The robust loss scale is kept at one spread. A sensitivity study over other scal
 ## Outputs
 
 src/bpk/rnd/decision.py reads the raw tables of the primary and confirmation runs and writes the objective table, the eligibility table and the decision (primary, confirmation, final default) with the config hash and date ranges, and appends one results-log row per variant and set.
+
+---
+
+## Outcome (appended after the rule was applied; the rule text above is unchanged)
+
+Source tables: fit_variant_decision_primary / _confirm, noise_study_v2 and noise_study_v2_confirm (with _by_regime and _raw), fallback_diagnostic_primary / _confirm, all in results/tables with config hash and date ranges.
+
+| Set | Dates | legacy | robust | robust_monotone | Winner |
+|---|---|---|---|---|---|
+| Primary | 152 (seed key noise_sample) | 0.142 | 0.599 | 0.600 | legacy |
+| Confirmation | 152 disjoint (seed key noise_confirm) | 0.109 | 0.618 | 0.628 | legacy |
+
+Objective is the mean over the two configurations of the bootstrap-mean p90 of the 30 day L1, failures at 2. All variants were eligible on coverage in both sets. Legacy is confirmed, so the defaults are svi_loss = linear and enforce_calendar = false (config.py).
+
+Why the robust variants lost (reproducible from the fallback_diagnostic tables, not part of the rule):
+
+- When SVI succeeds the robust fit is better (median native L1 0.0075 against 0.0186 on the primary set, 0.0075 against 0.0160 on the confirmation set).
+- The robust fits fail the butterfly check far more often and the convex fallback then takes over (about 17 to 19 percent of slices at combined 2 against under 0.5 percent for legacy). The fallback densities are close to useless: median native L1 about 1.3 to 1.4 (the maximum possible is 2), and 30 day densities with a convex bracket slice have median L1 about 0.85 to 0.91.
+- On the confirmation set the robust variant stale 5 percent advantage seen on the primary set did not hold at the 90th percentile (bootstrap-mean p90 0.118 against 0.031 on the primary set): a handful of fallback failures set the tail.
+- Maturity monotonicity enforcement removed all calendar violations (counted before and after in the tables) but did not change L1 materially, and the change in negative density points was small and not consistently in one direction.
+
+What this does and does not show:
+
+- It shows legacy is the better default under the pre-registered rule on this synthetic panel. It does not show that robust fitting is a bad idea; the diagnostic points at the convex fallback as the failing component. The fallback was almost never used before robust fitting exposed it, which is itself a finding about untested paths.
+- Any follow-up (a repaired fallback, a robust variant with it) is a new candidate. It must be registered as a new round in this file before it is run, with a fresh date set drawn with a new seed key, because the primary and confirmation sets have now been used.

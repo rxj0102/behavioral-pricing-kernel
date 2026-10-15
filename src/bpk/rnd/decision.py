@@ -92,6 +92,56 @@ def final_default(primary: Decision, confirm: Decision | None) -> tuple[str, str
     return LEGACY, f"not confirmed (confirmation winner: {confirm.winner}); reverted to legacy"
 
 
+def fallback_diagnostic(raw: pd.DataFrame, horizon_days: int = 30) -> pd.DataFrame:
+    """L1 of native slices by fit method, and of 30 day densities by whether a bracket slice
+    used the convex fallback. Reproducible companion of the decision (not part of the rule)."""
+    nat = raw[(raw["interpolated"] == False) & raw["l1_total"].notna()]  # noqa: E712
+    out: list[dict[str, object]] = []
+
+    def add(block: str, variant: str, group: str, vals: pd.Series) -> None:
+        if len(vals):
+            out.append(
+                {
+                    "block": block,
+                    "variant": variant,
+                    "group": group,
+                    "n": len(vals),
+                    "l1_median": float(vals.median()),
+                    "l1_p90": float(np.quantile(vals, 0.9)),
+                }
+            )
+
+    for v in ORDER:
+        for m in ("svi", "convex"):
+            add(
+                "native_by_method",
+                v,
+                m,
+                nat.loc[(nat["variant"] == v) & (nat["method"] == m), "l1_total"],
+            )
+    dtes = sorted(int(d) for d in nat["dte"].unique())
+    below = [d for d in dtes if d <= horizon_days]
+    above = [d for d in dtes if d >= horizon_days]
+    if below and above:
+        bracket = {below[-1], above[0]}
+        conv = nat[(nat["method"] == "convex") & nat["dte"].isin(bracket)]
+        keys = set(zip(conv["variant"], conv["spec"], conv["date"], strict=True))
+        h = raw[(raw["interpolated"] == True) & raw["l1_total"].notna()]  # noqa: E712
+        flag = pd.Series(
+            [(v, s, d) in keys for v, s, d in zip(h["variant"], h["spec"], h["date"], strict=True)],
+            index=h.index,
+        )
+        for v in ORDER:
+            for b in (False, True):
+                add(
+                    "30d_by_bracket_convex",
+                    v,
+                    str(b),
+                    h.loc[(h["variant"] == v) & (flag == b), "l1_total"],
+                )
+    return pd.DataFrame(out)
+
+
 def _span(meta: dict[str, str]) -> str:
     return f"{meta.get('first_date')}..{meta.get('last_date')} n={meta.get('n_dates')}"
 
@@ -110,6 +160,7 @@ def main() -> None:
     prim = decide(praw, args.seed)
     conf = None
     cmeta: dict[str, str] = {}
+    craw: pd.DataFrame | None = None
     if args.confirm:
         craw, cmeta = read_stats(Path(args.confirm))
         conf = decide(craw, args.seed)
@@ -124,9 +175,17 @@ def main() -> None:
         "final_default": default,
         "status": status,
     }
+    raws: dict[str, pd.DataFrame | None] = {"primary": praw, "confirm": craw}
     for name, d in (("primary", prim), ("confirm", conf)):
         if d is None:
             continue
+        rawd = raws[name]
+        if rawd is not None:
+            write_stats(
+                fallback_diagnostic(rawd).round(6),
+                out / f"fallback_diagnostic_{name}__synthetic_heston.csv",
+                meta,
+            )
         write_stats(
             d.table.round(6), out / f"fit_variant_decision_{name}__synthetic_heston.csv", meta
         )

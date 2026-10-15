@@ -93,3 +93,38 @@ def test_bootstrap_is_deterministic() -> None:
     r1 = boot_mean_p90(x, np.random.default_rng(1))
     r2 = boot_mean_p90(x, np.random.default_rng(1))
     assert r1 == r2 and 0 < r1 <= 1
+
+
+def test_fallback_diagnostic_separates_convex_bracket_dates() -> None:
+    from bpk.rnd.decision import fallback_diagnostic
+
+    rows = []
+    for i, conv in enumerate([False, False, True]):
+        for dte in (21, 45):
+            rows.append(
+                {
+                    "spec": "s",
+                    "variant": "legacy",
+                    "date": f"d{i}",
+                    "interpolated": False,
+                    "dte": dte,
+                    "method": "convex" if (conv and dte == 21) else "svi",
+                    "l1_total": 1.5 if (conv and dte == 21) else 0.01,
+                }
+            )
+        rows.append(
+            {
+                "spec": "s",
+                "variant": "legacy",
+                "date": f"d{i}",
+                "interpolated": True,
+                "dte": 30,
+                "method": "interp",
+                "l1_total": 1.2 if conv else 0.02,
+            }
+        )
+    t = fallback_diagnostic(pd.DataFrame(rows))
+    nat = t[t["block"] == "native_by_method"].set_index("group")
+    assert nat.loc["convex", "n"] == 1 and nat.loc["convex", "l1_median"] == 1.5
+    h = t[t["block"] == "30d_by_bracket_convex"].set_index("group")
+    assert h.loc["True", "l1_median"] == 1.2 and h.loc["False", "l1_median"] == 0.02

@@ -45,6 +45,7 @@ from bpk.data.synthetic import SyntheticHestonAdapter
 from bpk.rnd.grade import exact_q_density, grade_estimate
 from bpk.rnd.pipeline import rnd_for_date
 from bpk.rnd.run import rnd_hash, sample_dates
+from bpk.utils.results_log import log_spec
 from bpk.utils.seed import make_rng
 from bpk.utils.stats_io import write_stats
 
@@ -372,6 +373,11 @@ def main() -> None:
     ap.add_argument("--tag", default="v2")
     ap.add_argument("--n-dates", type=int, default=None, help="use only the first n grading dates")
     ap.add_argument(
+        "--scale-study",
+        action="store_true",
+        help="separate logged study of the robust loss scale (cannot change the default)",
+    )
+    ap.add_argument(
         "--confirm-against",
         default=None,
         help="primary raw table; run on a disjoint, equal-size date set (key noise_confirm)",
@@ -391,9 +397,41 @@ def main() -> None:
         dates = confirmation_dates(avail, cfg, used, len(used))
         specs = tuple(s for s in SPECS if s.name in RULE_SPECS)
         args.tag = "v2_confirm"
+    variants = None
+    if args.scale_study:
+        from bpk.rnd.decision import SPECS as RULE_SPECS
+
+        scales = (0.5, 2.0, 4.0)
+        variants = {
+            f"scale_{s}": {"svi_loss": "soft_l1", "svi_f_scale": s, "enforce_calendar": False}
+            for s in scales
+        }
+        specs = tuple(sp for sp in SPECS if sp.name in RULE_SPECS)
+        args.tag = "fscale"
     pd.set_option("display.width", 250)
-    summ = run(cfg, cfg.tables_dir, specs, args.tag, args.n_dates, dates)
+    summ = run(cfg, cfg.tables_dir, specs, args.tag, args.n_dates, dates, variants)
     print(summ.to_string(index=False))
+    if args.scale_study:
+        for _, r in summ.iterrows():
+            log_spec(
+                cfg.run.results_log,
+                phase="phase2",
+                spec_id=f"svi_{r['variant']}_{r['spec']}",
+                status="ok",
+                params={"variant": r["variant"], "spec": r["spec"], "set": "primary 152 dates"},
+                metrics={
+                    k: float(r[k])
+                    for k in (
+                        "slice_coverage",
+                        "horizon_coverage",
+                        "l1_30d_median",
+                        "l1_30d_p90",
+                        "l1_30d_p90_failures_at_max",
+                        "convex_fallback_share",
+                    )
+                },
+                note="scale sensitivity only; the default scale stays one spread",
+            )
 
 
 if __name__ == "__main__":

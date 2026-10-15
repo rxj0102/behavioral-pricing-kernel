@@ -105,9 +105,10 @@ class RndConfig(_Strict):
     n_k: int = Field(1801, gt=100)
     min_points: int = Field(6, ge=5)
     xi_bounds: tuple[float, float] = (-0.25, 0.5)
-    svi_loss: Literal["linear", "soft_l1", "huber", "cauchy"] = "soft_l1"
+    # Defaults set by the rule in docs/fit_variant_decision.md (legacy won, confirmed).
+    svi_loss: Literal["linear", "soft_l1", "huber", "cauchy"] = "linear"
     svi_f_scale: float = Field(1.0, gt=0, description="Robust loss scale in units of one spread")
-    enforce_calendar: bool = True
+    enforce_calendar: bool = False
     tail_rule: Literal["fixed", "slope", "gev"] = "fixed"
     xi_fixed: float = 0.0
     slope_window: float = Field(0.02, gt=0, description="Half window in k for the tail slope")

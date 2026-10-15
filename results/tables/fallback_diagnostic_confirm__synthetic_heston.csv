@@ -1,0 +1,19 @@
+# rule: docs/fit_variant_decision.md
+# primary_config_hash: 9e05fa86a97496acccf85cb18287911d6aaaafac6d86314a7ab0fd1e38166d1e
+# primary_dates: 1996-01-26..2024-09-09 n=152
+# confirm_dates: 1996-02-23..2024-10-16 n=152
+# primary_winner: legacy
+# confirm_winner: legacy
+# final_default: legacy
+# status: confirmed
+block,variant,group,n,l1_median,l1_p90
+native_by_method,legacy,svi,1520,0.015953,0.065443
+native_by_method,robust,convex,156,1.321056,1.560268
+native_by_method,robust,svi,1364,0.007479,0.016315
+native_by_method,robust_monotone,convex,156,1.321056,1.560268
+native_by_method,robust_monotone,svi,1364,0.007479,0.016315
+30d_by_bracket_convex,legacy,False,304,0.030422,0.111112
+30d_by_bracket_convex,robust,False,203,0.011234,0.02231
+30d_by_bracket_convex,robust,True,101,0.848776,1.274819
+30d_by_bracket_convex,robust_monotone,False,203,0.011234,0.02231
+30d_by_bracket_convex,robust_monotone,True,101,0.848776,1.274819
