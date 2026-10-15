@@ -92,3 +92,21 @@ def test_tiny_study_runs_and_writes_tables(tmp_path: Path) -> None:
     tbl, meta = read_stats(tmp_path / "t" / "noise_study_t_by_regime__synthetic_heston.csv")
     assert meta["n_dates"] == "2" and set(tbl["regime"]) <= {"low", "mid", "high"}
     assert {"slice_coverage", "failed_slices", "l1_30d_p90_failures_at_max"} <= set(tbl.columns)
+
+
+def test_confirmation_dates_are_disjoint_reproducible_and_new() -> None:
+    from bpk.config import Config
+    from bpk.rnd.noise_study import confirmation_dates
+    from bpk.rnd.run import sample_dates
+
+    cfg = Config.model_validate({"data": {"start": "1996-01-01", "end": "2024-12-31"}})
+    avail = pd.bdate_range(cfg.data.start, cfg.data.end)
+    primary = {d for d in sample_dates(avail, cfg)}
+    a = confirmation_dates(avail, cfg, primary, len(primary))
+    b = confirmation_dates(avail, cfg, primary, len(primary))
+    assert a == b and len(a) == len(primary) == len(set(a))
+    assert not set(a) & primary
+    other = Config.model_validate(
+        {"run": {"seed": 7}, "data": {"start": "1996-01-01", "end": "2024-12-31"}}
+    )
+    assert confirmation_dates(avail, other, primary, len(primary)) != a

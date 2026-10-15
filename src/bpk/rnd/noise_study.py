@@ -131,9 +131,10 @@ def _work(
         tuple[float, float, float],
         Config,
         tuple[NoiseSpec, ...],
+        dict[str, dict[str, object]],
     ],
 ) -> list[dict[str, object]]:
-    date, cur, old, cfg, specs = args
+    date, cur, old, cfg, specs, variants = args
     ad = SyntheticHestonAdapter(cfg.synthetic, cfg.run.seed)
     seed = cfg.run.seed
     prev_date = date - pd.tseries.offsets.BDay(1)
@@ -144,7 +145,7 @@ def _work(
         rng = make_rng(seed, f"noise_{spec.name}_{date.date()}")
         noisy = apply_noise(panel, prev, spec, rng)
         clean = clean_panel(noisy, cfg.cleaning).quotes
-        for vname, over in VARIANTS.items():
+        for vname, over in variants.items():
             base = {
                 "spec": spec.name,
                 "kind": spec.kind,
@@ -304,14 +305,27 @@ def by_regime(
     return pd.DataFrame(out)
 
 
+def confirmation_dates(
+    avail: pd.DatetimeIndex, cfg: Config, exclude: set[pd.Timestamp], n: int
+) -> list[pd.Timestamp]:
+    """Dates disjoint from `exclude`, drawn with the seed key noise_confirm (a new seed)."""
+    pool = [d for d in avail[1:] if d not in exclude]
+    rng = make_rng(cfg.run.seed, "noise_confirm")
+    picks = rng.choice(len(pool), size=n, replace=False)
+    return sorted(pool[i] for i in picks)
+
+
 def run(
     cfg: Config,
     out: Path,
     specs: tuple[NoiseSpec, ...] = SPECS,
     tag: str = "v2",
     n_dates: int | None = None,
+    dates: list[pd.Timestamp] | None = None,
+    variants: dict[str, dict[str, object]] | None = None,
 ) -> pd.DataFrame:
-    """Run the study on the grading date set (or a smaller seeded subset) and write tables."""
+    """Run the study on the grading date set (or given dates) and write tables."""
+    variants = variants or VARIANTS
     ad = SyntheticHestonAdapter(cfg.synthetic, cfg.run.seed)
     avail = pd.bdate_range(cfg.data.start, cfg.data.end)
     st = ad.simulate_state(avail)
@@ -319,10 +333,14 @@ def run(
         d: (float(sp), float(v), float(a))
         for d, sp, v, a in zip(st["date"], st["spot"], st["var"], st["alpha_t"], strict=True)
     }
-    dates = [d for d in sample_dates(avail, cfg) if d - pd.tseries.offsets.BDay(1) in rows_of]
+    if dates is None:
+        dates = [d for d in sample_dates(avail, cfg) if d - pd.tseries.offsets.BDay(1) in rows_of]
     if n_dates is not None:
         dates = dates[:n_dates]
-    jobs = [(d, rows_of[d], rows_of[d - pd.tseries.offsets.BDay(1)], cfg, specs) for d in dates]
+    jobs = [
+        (d, rows_of[d], rows_of[d - pd.tseries.offsets.BDay(1)], cfg, specs, variants)
+        for d in dates
+    ]
     with ProcessPoolExecutor(mp_context=mp.get_context("spawn")) as ex:
         raw = pd.DataFrame([r for rows in ex.map(_work, jobs) for r in rows])
     n_mat = len(cfg.synthetic.maturities_days)
@@ -335,7 +353,7 @@ def run(
         "first_date": dates[0].date().isoformat(),
         "last_date": dates[-1].date().isoformat(),
         "specs": json.dumps([s.name for s in specs]),
-        "variants": json.dumps(VARIANTS),
+        "variants": json.dumps(variants),
         "note": "synthetic panel, method validation only; baseline defects present at all levels",
     }
     sfx = f"_{tag}" if tag else ""
@@ -353,12 +371,29 @@ def main() -> None:
     ap.add_argument("--specs", default=",".join(RERUN_SPECS), help="comma separated, or all")
     ap.add_argument("--tag", default="v2")
     ap.add_argument("--n-dates", type=int, default=None, help="use only the first n grading dates")
+    ap.add_argument(
+        "--confirm-against",
+        default=None,
+        help="primary raw table; run on a disjoint, equal-size date set (key noise_confirm)",
+    )
     args = ap.parse_args()
     cfg = load_config(args.config)
     names = [s.name for s in SPECS] if args.specs == "all" else args.specs.split(",")
     specs = tuple(s for s in SPECS if s.name in names)
+    dates = None
+    if args.confirm_against:
+        from bpk.rnd.decision import SPECS as RULE_SPECS
+        from bpk.utils.stats_io import read_stats
+
+        raw, _ = read_stats(Path(args.confirm_against))
+        used = {pd.Timestamp(d) for d in raw["date"].unique()}
+        avail = pd.bdate_range(cfg.data.start, cfg.data.end)
+        dates = confirmation_dates(avail, cfg, used, len(used))
+        specs = tuple(s for s in SPECS if s.name in RULE_SPECS)
+        args.tag = "v2_confirm"
     pd.set_option("display.width", 250)
-    print(run(cfg, cfg.tables_dir, specs, args.tag, args.n_dates).to_string(index=False))
+    summ = run(cfg, cfg.tables_dir, specs, args.tag, args.n_dates, dates)
+    print(summ.to_string(index=False))
 
 
 if __name__ == "__main__":
