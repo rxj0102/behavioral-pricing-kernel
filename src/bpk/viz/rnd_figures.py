@@ -111,7 +111,8 @@ def make_figures(cfg: Config, out_dir: Path) -> list[Path]:
     ax3.set_yticks(range(len(piv)), [f"{i}d" for i in piv.index])
     for i in range(piv.shape[0]):
         for j in range(piv.shape[1]):
-            ax3.text(j, i, f"{float(piv.iat[i, j]):.4f}", ha="center", va="center", color="w", fontsize=7)
+            label = f"{float(piv.iat[i, j]):.4f}"
+            ax3.text(j, i, label, ha="center", va="center", color="w", fontsize=7)
     fig3.colorbar(im, ax=ax3, label="median L1 over dates")
     ax3.set_title(f"L1 error vs exact Q by maturity and region ({NOTE})")
     fig3.tight_layout()
