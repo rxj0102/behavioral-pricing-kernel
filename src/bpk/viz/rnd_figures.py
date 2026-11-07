@@ -106,12 +106,14 @@ def make_figures(cfg: Config, out_dir: Path) -> list[Path]:
     )
     piv = piv[regs]
     fig3, ax3 = plt.subplots(figsize=(8, 4))
-    im = ax3.imshow(piv.to_numpy(), aspect="auto", cmap="viridis")
+    vals = piv.to_numpy(dtype=float)
+    im = ax3.imshow(vals, aspect="auto", cmap="viridis")
     ax3.set_xticks(range(len(regs)), regs, rotation=30)
     ax3.set_yticks(range(len(piv)), [f"{i}d" for i in piv.index])
     for i in range(piv.shape[0]):
         for j in range(piv.shape[1]):
-            ax3.text(j, i, f"{piv.iat[i, j]:.4f}", ha="center", va="center", color="w", fontsize=7)
+            label = f"{vals[i, j]:.4f}"
+            ax3.text(j, i, label, ha="center", va="center", color="w", fontsize=7)
     fig3.colorbar(im, ax=ax3, label="median L1 over dates")
     ax3.set_title(f"L1 error vs exact Q by maturity and region ({NOTE})")
     fig3.tight_layout()
