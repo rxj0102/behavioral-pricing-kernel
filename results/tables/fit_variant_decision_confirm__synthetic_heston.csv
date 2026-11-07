@@ -1,0 +1,12 @@
+# rule: docs/fit_variant_decision.md
+# primary_config_hash: 9e05fa86a97496acccf85cb18287911d6aaaafac6d86314a7ab0fd1e38166d1e
+# primary_dates: 1996-01-26..2024-09-09 n=152
+# confirm_dates: 1996-02-23..2024-10-16 n=152
+# primary_winner: legacy
+# confirm_winner: legacy
+# final_default: legacy
+# status: confirmed
+variant,boot_mean_p90_stale_0.05,horizon_cov_stale_0.05,slice_cov_stale_0.05,boot_mean_p90_combined_2,horizon_cov_combined_2,slice_cov_combined_2,objective,eligible
+legacy,0.075381,1.0,1.0,0.141543,1.0,1.0,0.108462,True
+robust,0.118279,1.0,1.0,1.117511,1.0,1.0,0.617895,True
+robust_monotone,0.136288,1.0,1.0,1.119601,1.0,1.0,0.627944,True

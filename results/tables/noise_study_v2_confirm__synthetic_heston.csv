@@ -1,0 +1,15 @@
+# source: synthetic_heston
+# config_hash: 9e05fa86a97496acccf85cb18287911d6aaaafac6d86314a7ab0fd1e38166d1e
+# n_dates: 152
+# first_date: 1996-02-23
+# last_date: 2024-10-16
+# specs: ["stale_0.05", "combined_2"]
+# variants: {"legacy": {"svi_loss": "linear", "enforce_calendar": false}, "robust": {"svi_loss": "soft_l1", "enforce_calendar": false}, "robust_monotone": {"svi_loss": "soft_l1", "enforce_calendar": true}}
+# note: synthetic panel, method validation only; baseline defects present at all levels
+variant,spec,kind,level,n_dates,slice_coverage,horizon_coverage,failed_slices,failed_horizons,l1_native_median,l1_native_p90,l1_30d_median,l1_30d_p90,l1_30d_p90_ci_lo,l1_30d_p90_ci_hi,l1_30d_p90_failures_at_max,svi_rmse_median,convex_fallback_share,butterfly_viol_points,calendar_points_before,calendar_points_after,mono_adjust_rel_mean,negative_points_native,negative_points_30d
+legacy,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.011372,0.037983,0.022351,0.077012,0.056835,0.089948,0.077012,0.002525,0.0,0,0,0,0.0,0,0
+robust,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.006173,0.009104,0.010396,0.021811,0.02002,0.810993,0.021811,0.00253,0.015789,15,11,0,0.0,2147,44
+robust_monotone,stale_0.05,stale,0.05,152,1.0,1.0,0,0,0.006173,0.009104,0.010396,0.021811,0.019706,0.81092,0.021811,0.00253,0.015789,15,11,0,3e-06,1765,47
+legacy,combined_2,combined,2.0,152,1.0,1.0,0,0,0.024055,0.092851,0.042857,0.144204,0.114839,0.170208,0.144204,0.004453,0.0,0,244,0,0.0,90,0
+robust,combined_2,combined,2.0,152,1.0,1.0,0,0,0.012188,1.303709,0.543948,1.079688,0.978478,1.280922,1.079688,0.003982,0.189474,202,599,0,0.0,47171,3611
+robust_monotone,combined_2,combined,2.0,152,1.0,1.0,0,0,0.012188,1.303709,0.543948,1.079688,0.9993,1.280253,1.079688,0.003982,0.189474,202,599,0,0.000223,37773,3495

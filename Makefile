@@ -19,7 +19,7 @@ lint:
 data:
 	$(PY) -m bpk.data.build --config $(CONFIG)
 rnd:
-	@echo "rnd: not implemented until Phase 2" >&2; exit 1
+	$(PY) -m bpk.rnd.run --config $(CONFIG)
 physical:
 	@echo "physical: not implemented until Phase 3" >&2; exit 1
 epk:
@@ -33,7 +33,7 @@ backtest:
 dashboard:
 	@echo "dashboard: not implemented until Phase 8" >&2; exit 1
 figures:
-	@echo "figures: not implemented until Phase 2 onward" >&2; exit 1
+	$(PY) -m bpk.viz.rnd_figures --config $(CONFIG)
 paper:
 	@echo "paper: not implemented until Phase 9" >&2; exit 1
 
