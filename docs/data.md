@@ -1,5 +1,18 @@
 # Data
 
+## Real data used by the study (Amendment 3)
+
+The study in the README uses four free series, frozen in `data/real/` with their URLs, date ranges and SHA-256 hashes in `data/real/manifest.json`. `python -m bpk.data.real` downloads them again.
+
+| File | Source | Content |
+|---|---|---|
+| mpd.csv | Federal Reserve Bank of Minneapolis, market-based probability statistics | S&P 500 option-implied density statistics, 6 and 12 month, 2007-01-12 onward |
+| french.csv | Ken French Data Library, daily research factors | Market excess return and bill rate, 1926-07-01 onward |
+| sentiment.csv | Jeffrey Wurgler's data page | Baker-Wurgler SENT and SENT_ORTH, monthly |
+| vix.csv | FRED, series VIXCLS | CBOE VIX, daily |
+
+The Ken French file in the snapshot was taken from a copy downloaded from the same URL earlier on the same day, because the host refused connections when the snapshot was built. The rest of this document describes the option-chain data layer, which the study does not use.
+
 Status: Phase 1 (amended). Only the synthetic source has been run. No real market data has been ingested, because the build sandbox network policy blocked every external host and no WRDS credentials exist. Nothing produced from synthetic data may be reported as an empirical result.
 
 ## Data decision
