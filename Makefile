@@ -3,7 +3,7 @@
 PY ?= python
 CONFIG ?= configs/default.yaml
 
-.PHONY: setup data rnd physical epk estimate predict backtest figures paper dashboard test lint all
+.PHONY: setup data rnd study study-fast check refresh-data figures paper dashboard test lint all
 
 setup:
 	$(PY) -m pip install -e ".[dev]"
@@ -20,16 +20,15 @@ data:
 	$(PY) -m bpk.data.build --config $(CONFIG)
 rnd:
 	$(PY) -m bpk.rnd.run --config $(CONFIG)
-physical:
-	@echo "physical: not implemented until Phase 3" >&2; exit 1
-epk:
-	@echo "epk: not implemented until Phase 4" >&2; exit 1
-estimate:
-	@echo "estimate: not implemented until Phase 5" >&2; exit 1
-predict:
-	@echo "predict: not implemented until Phase 6" >&2; exit 1
-backtest:
-	@echo "backtest: not implemented until Phase 7" >&2; exit 1
+study:  ## the real-data study of Amendment 3 (about 25 minutes), then refresh the README
+	$(PY) -m bpk.study.run
+	$(PY) -m bpk.study.render
+study-fast:  ## a thinned run for a quick check; writes results/real_fast only
+	$(PY) -m bpk.study.run --fast
+check:  ## confirm the README matches results/real/metrics.json
+	$(PY) -m bpk.study.render --check
+refresh-data:  ## download the free series again and overwrite data/real
+	$(PY) -m bpk.data.real
 dashboard:
 	@echo "dashboard: not implemented until Phase 8" >&2; exit 1
 figures:
@@ -37,5 +36,4 @@ figures:
 paper:
 	@echo "paper: not implemented until Phase 9" >&2; exit 1
 
-# Runs only what exists today. Extended as phases land.
-all: lint test
+all: lint test check

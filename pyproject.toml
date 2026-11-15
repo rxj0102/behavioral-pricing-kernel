@@ -16,6 +16,8 @@ dependencies = [
     "pyarrow>=16,<27",
     "pydantic>=2.7,<3",
     "pyyaml>=6,<7",
+    "matplotlib>=3.8,<4",
+    "openpyxl>=3.1,<4",
 ]
 
 [project.optional-dependencies]

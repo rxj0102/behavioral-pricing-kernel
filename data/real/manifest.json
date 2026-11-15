@@ -1,0 +1,30 @@
+{
+  "mpd": {
+    "url": "https://www.minneapolisfed.org/-/media/files/banking/mpd/mpd_stats.csv",
+    "rows": 1636,
+    "first": "2007-01-12",
+    "last": "2026-10-28",
+    "sha256": "66b381d3c4b2038f5fb001ffc71490317c4da8163ff6e99ae9ad419d036581c5"
+  },
+  "french": {
+    "url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+    "rows": 26338,
+    "first": "1926-07-01",
+    "last": "2026-09-30",
+    "sha256": "c7df7cd579be68a257e859eea23bc002bda764426f8f5ef531b6dbf78c9e4c4d"
+  },
+  "sentiment": {
+    "url": "https://pages.stern.nyu.edu/~jwurgler/data/SENTIMENT.xlsx",
+    "rows": 725,
+    "first": "196507",
+    "last": "202512",
+    "sha256": "5ec211fef3b03e2fac492f88396a85e1994555533544e1e9af0c0fb269993222"
+  },
+  "vix": {
+    "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS",
+    "rows": 9316,
+    "first": "1990-01-02",
+    "last": "2026-11-12",
+    "sha256": "710bcce90d5bf7847c83152a552a554f3bf6d062f23167ebe8e2e56b9b910732"
+  }
+}
