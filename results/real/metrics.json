@@ -745,8 +745,8 @@
     "turnover_per_year": 5.65989,
     "trials_sr_std": 0.0271852,
     "minus_buy_hold_t": -1.92291,
-    "dsr": 0.933232,
-    "n_trials": 36,
-    "hurdle_annual": 0.202238
+    "dsr": 0.931497,
+    "n_trials": 40,
+    "hurdle_annual": 0.206189
   }
 }

@@ -1,0 +1,127 @@
+[
+ {
+  "variant": "fhs",
+  "description": "GJR-GARCH filtered historical simulation, sample mean premium (pre-specified)",
+  "rmse_oos": {
+   "none": 0.0841707,
+   "crra": 0.0777941,
+   "habit": 0.0829895,
+   "weight": 0.0717139
+  },
+  "weight_vs_crra": {
+   "mean_diff": 0.000909037,
+   "t": 4.50875,
+   "p_one_sided": 3.26058e-06,
+   "n": 695
+  },
+  "weight_vs_habit": {
+   "mean_diff": 0.00174438,
+   "t": 1.15314,
+   "p_one_sided": 0.124426,
+   "n": 695
+  },
+  "alpha_median": 0.799912,
+  "share_alpha_below_one": 0.957055,
+  "n_oos": 695
+ },
+ {
+  "variant": "fhs_zero_premium",
+  "description": "as fhs with a zero expected excess return",
+  "rmse_oos": {
+   "none": 0.0311764,
+   "crra": 0.029594,
+   "habit": 0.0296698,
+   "weight": 0.0289754
+  },
+  "weight_vs_crra": {
+   "mean_diff": 3.62253e-05,
+   "t": 0.351516,
+   "p_one_sided": 0.362601,
+   "n": 695
+  },
+  "weight_vs_habit": {
+   "mean_diff": 4.07178e-05,
+   "t": 0.385986,
+   "p_one_sided": 0.349753,
+   "n": 695
+  },
+  "alpha_median": 0.918536,
+  "share_alpha_below_one": 0.786503,
+  "n_oos": 695
+ },
+ {
+  "variant": "fhs_double_premium",
+  "description": "as fhs with twice the sample mean excess return",
+  "rmse_oos": {
+   "none": 0.154643,
+   "crra": 0.145749,
+   "habit": 0.139587,
+   "weight": 0.124594
+  },
+  "weight_vs_crra": {
+   "mean_diff": 0.00571893,
+   "t": 3.74923,
+   "p_one_sided": 8.86875e-05,
+   "n": 695
+  },
+  "weight_vs_habit": {
+   "mean_diff": 0.00396082,
+   "t": 2.44346,
+   "p_one_sided": 0.00727357,
+   "n": 695
+  },
+  "alpha_median": 0.620704,
+  "share_alpha_below_one": 0.988957,
+  "n_oos": 695
+ },
+ {
+  "variant": "fhs_gaussian",
+  "description": "GJR-GARCH with Gaussian shocks instead of the empirical residuals",
+  "rmse_oos": {
+   "none": 0.0801575,
+   "crra": 0.0605225,
+   "habit": 0.0474295,
+   "weight": 0.0616587
+  },
+  "weight_vs_crra": {
+   "mean_diff": -0.000138822,
+   "t": -1.25519,
+   "p_one_sided": 0.895295,
+   "n": 695
+  },
+  "weight_vs_habit": {
+   "mean_diff": -0.00155224,
+   "t": -3.54697,
+   "p_one_sided": 0.999805,
+   "n": 695
+  },
+  "alpha_median": 0.840147,
+  "share_alpha_below_one": 0.89816,
+  "n_oos": 695
+ },
+ {
+  "variant": "hs_5y",
+  "description": "unfiltered historical simulation: daily excess returns drawn from the last 5 years",
+  "rmse_oos": {
+   "none": 0.145832,
+   "crra": 0.0999767,
+   "habit": 0.0934123,
+   "weight": 0.0982925
+  },
+  "weight_vs_crra": {
+   "mean_diff": 0.000333931,
+   "t": 1.37979,
+   "p_one_sided": 0.0838261,
+   "n": 695
+  },
+  "weight_vs_habit": {
+   "mean_diff": -0.000935559,
+   "t": -1.73497,
+   "p_one_sided": 0.958627,
+   "n": 695
+  },
+  "alpha_median": 0.93378,
+  "share_alpha_below_one": 0.552147,
+  "n_oos": 695
+ }
+]
