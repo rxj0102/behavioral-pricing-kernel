@@ -73,7 +73,24 @@ def pp(x: float, d: int = 1) -> str:
     return f"{100 * x:.{d}f}"
 
 
-def headline(m: dict[str, Any]) -> str:
+def robustness_sentence(rows: list[dict[str, Any]] | None) -> str:
+    """One sentence on the post hoc physical density check, from physical_robustness.json."""
+    if not rows:
+        return ""
+    n = len(rows)
+    beats = sum(r["weight_vs_crra"]["t"] > 1.96 for r in rows)
+    tails = sum(r["share_alpha_below_one"] > 0.5 for r in rows)
+    if beats == n:
+        raise SystemExit("robustness rows now all favour weighting; rewrite robustness_sentence()")
+    return (
+        f" A later check that was not pre-registered shows this rests on the assumed realistic "
+        f"distribution: across {n} reasonable choices of it, weighting beats CRRA at 5 percent in only "
+        f"{beats}, while the distortion still overweights tails on most dates in {tails} "
+        f"([results/real/physical_robustness.md](results/real/physical_robustness.md))."
+    )
+
+
+def headline(m: dict[str, Any], rob: list[dict[str, Any]] | None = None) -> str:
     v = verdicts(m)
     s, f6 = m["sample"], m["fit"]["6m"]["models"]
     dm6, cu = m["dm"]["6m"], m["curvature"]
@@ -100,13 +117,13 @@ def headline(m: dict[str, Any]) -> str:
     return (
         f"**Answer, on {s['n_dates_6m']} real option-implied densities from {s['first_date'][:4]} to "
         f"{s['last_date'][:4]}: not by the tests set in advance.** All four pre-registered hypotheses fail. "
-        f"One finding survives. Probability weighting fits the gap between market-implied and realistic "
+        f"One finding survives those tests. Probability weighting fits the gap between market-implied and realistic "
         f"probabilities better out of sample than standard risk aversion (average error "
         f"{pp(f6['weight']['rmse_oos'])} against {pp(f6['crra']['rmse_oos'])} percentage points, "
         f"t = {dm6['weight vs crra']['t']:.1f}), and the estimated distortion overweights tail events on "
         f"{pp(cu['share_below_one'], 0)}% of dates. But it does not clearly beat a habit-style benchmark "
         f"(p = {dm6['weight vs habit']['p_one_sided']:.2f}), so the first hypothesis fails its own "
-        f"pre-registered test at the main horizon. The distortion does not rise with investor sentiment "
+        f"pre-registered test at the main horizon.{robustness_sentence(rob)} The distortion does not rise with investor sentiment "
         f"(t = {m['h2']['curvature']['t']:.1f}, wrong sign), it does not predict returns out of sample "
         f"(R squared gain {pp(h3['r2'])}%, p = {h3['p_value']:.2f}), and trading on it loses to buy and hold. "
         f"No model fits well in absolute terms: the best one still misses by {pp(f6[best]['rmse_oos'])} "
@@ -253,7 +270,9 @@ def main() -> None:
     m = json.loads((ROOT / "results" / "real" / "metrics.json").read_text())
     readme = ROOT / "README.md"
     text = readme.read_text()
-    new = fill(fill(text, "headline", headline(m)), "results", results(m))
+    rob_path = ROOT / "results" / "real" / "physical_robustness.json"
+    rob = json.loads(rob_path.read_text()) if rob_path.exists() else None
+    new = fill(fill(text, "headline", headline(m, rob)), "results", results(m))
     if "--check" in sys.argv:
         if new != text:
             print("README is out of date; run python -m bpk.study.render")

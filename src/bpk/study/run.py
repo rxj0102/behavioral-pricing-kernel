@@ -60,8 +60,26 @@ class Built:
     kernels: FloatArr  # (D, n_grid) pricing kernel on a standardised grid, for the figure
 
 
-def build(data: real.RealData, market: str, n_paths: int, step: int) -> Built:
-    """Physical samples, published points and covariates for every density date."""
+PHYSICAL_VARIANTS = {
+    "fhs": "GJR-GARCH filtered historical simulation, sample mean premium (pre-specified)",
+    "fhs_zero_premium": "as fhs with a zero expected excess return",
+    "fhs_double_premium": "as fhs with twice the sample mean excess return",
+    "fhs_gaussian": "GJR-GARCH with Gaussian shocks instead of the empirical residuals",
+    "hs_5y": "unfiltered historical simulation: daily excess returns drawn from the last 5 years",
+}
+
+
+def build(
+    data: real.RealData, market: str, n_paths: int, step: int, physical: str = "fhs"
+) -> Built:
+    """Physical samples, published points and covariates for every density date.
+
+    ``physical`` picks the physical density (PHYSICAL_VARIANTS). Only ``fhs`` is
+    pre-specified; the others are the post hoc robustness check of
+    bpk.study.physical_robustness.
+    """
+    if physical not in PHYSICAL_VARIANTS:
+        raise ValueError(f"unknown physical variant {physical}")
     mk = data.market
     y_all = np.log1p(mk["mkt_rf"].to_numpy(dtype=np.float64))
     days = mk.index
@@ -80,9 +98,19 @@ def build(data: real.RealData, market: str, n_paths: int, step: int) -> Built:
         p = params[t.year]
         z, h_next = fhs.filter_state(y_all[g0:i], p)
         rng = np.random.default_rng([SEED, HORIZON[market], t.toordinal()])
-        x = fhs.simulate_horizon(
-            z, h_next, p, float(y_all[:i].mean()), HORIZON[market], n_paths, rng
-        )
+        drift = float(y_all[:i].mean())
+        if physical == "fhs_zero_premium":
+            drift = 0.0
+        elif physical == "fhs_double_premium":
+            drift = 2.0 * drift
+        if physical == "fhs_gaussian":
+            z = rng.standard_normal(len(z))
+        if physical == "hs_5y":
+            pool = y_all[max(i - 1260, 0) : i]
+            draws = pool[rng.integers(0, len(pool), size=(HORIZON[market], n_paths))]
+            x = np.sort(draws.sum(axis=0))
+        else:
+            x = fhs.simulate_horizon(z, h_next, p, drift, HORIZON[market], n_paths, rng)
         st = Stats(*(float(row[c]) for c in real.MPD_COLUMNS))
         mix = fit_mixture(st)
         c = mix.forward_shift()

@@ -4,7 +4,7 @@
 
 These apply to the results in the README. The sections below them concern the option-chain extraction code.
 
-- Joint hypothesis. The physical density is a GJR-GARCH filtered historical simulation with a constant expected excess return (the sample mean since 1926). Every pricing kernel result is conditional on it.
+- Joint hypothesis. The physical density is a GJR-GARCH filtered historical simulation with a constant expected excess return (the sample mean since 1926). Every pricing kernel result is conditional on it. A post hoc check that was not pre-registered (results/real/physical_robustness.md) shows how much: with a zero premium every model's error falls to about 3 percentage points, and probability weighting beats CRRA at 5 percent under only 2 of 5 physical densities, though its fitted distortion overweights tails on most dates under all 5.
 - Published statistics, not option prices. The risk-neutral side is nine statistics per date from the Minneapolis Fed, produced with its own smoothing and tail method. The 20 percent thresholds are read in log-return units; a test shows that reading fits the other statistics better than simple-return units.
 - Location. The forward shift is taken from a two-normal reconstruction of each density and averages about 1.3 percent per six months, close to the bill rate over the period. An error here moves every published point by the same small amount.
 - Horizon. Six and twelve months. Results need not carry over to the 30 day horizon of most of the literature.
